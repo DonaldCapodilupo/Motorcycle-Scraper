@@ -5,6 +5,17 @@ from selenium import webdriver
 from datetime import date
 
 
+def setupFiles():
+    import csv
+    try:
+        with open('output.csv', newline='') as csvFile:
+            pass
+    except FileNotFoundError:
+        with open('output.csv', 'w', newline='') as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerow(["today", "name", "price", "stock_Number", "color", "mileage", "transmission"])
+
+
 def get_Motorcycle_Information_Cycle_Design(url):
     page_Info = requests.get(url).text
 
@@ -62,6 +73,7 @@ today = str(date.today())
 
 
 if __name__ == '__main__':
+    setupFiles()
     for website in links_To_Scrape:
 
         driver = webdriver.Chrome()
