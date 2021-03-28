@@ -13,7 +13,8 @@ def setupFiles():
     except FileNotFoundError:
         with open('output.csv', 'w', newline='') as csvFile:
             writer = csv.writer(csvFile)
-            writer.writerow(["today", "name", "price", "stock_Number", "color", "mileage", "transmission"])
+            writer.writerow(["date", "name", "price", "stock_Number", "color", "mileage", "transmission","engine displacement",
+                             "condition"])
 
 
 def get_Motorcycle_Information_Cycle_Design(url):
@@ -67,8 +68,57 @@ def get_Motorcycle_Information_Central_Mass_Powersport(url):
     information = [today, name,  price, "", color, mileage]
     return information
 
+def get_Motorcycle_Information_Craigslist(url):
+    motorcycle_Information = []
 
-links_To_Scrape = ["https://www.newenglandpowersports.com/preowned","https://www.cycledesignonline.com/default.asp?page=xPreOwnedInventory"]
+    page_Info = requests.get(url).text
+
+    soup = BeautifulSoup(page_Info, 'html.parser')
+    try:
+        title_Row = soup.find('span', class_='postingtitletext')
+        motorcycle_name = title_Row.find('span',  id="titletextonly").text
+        motorcycle_price = title_Row.find('span', class_="price").text
+
+        information_Table = soup.find('div', class_='mapAndAttrs')
+        bike_Information = information_Table.find_all('p', class_='attrgroup')
+
+        #groups = bike_Information.find_next('p')
+
+
+
+        for i in bike_Information:
+            information_Dict = {
+                'condition': '',
+                'odometer': '',
+                'color': '',
+                'transmission': '',
+                'engine displacement': '',
+            }
+            for s in i.find_all():
+                if 'condition' in s.text:
+                    information_Dict['condition'] = s.text[11:]
+
+                elif 'odometer: ' in s.text:
+                    information_Dict['odometer'] = s.text[9:]
+                elif 'color: ' in s.text:
+                    information_Dict['color'] = s.text[13:]
+                elif 'transmission: ' in s.text:
+                    information_Dict['transmission'] = s.text[14:]
+                elif 'engine displacement: ' in s.text:
+                    information_Dict['engine displacement'] = s.text[19:]
+
+            if information_Dict['condition'] != '':
+                with open('output.csv', 'a', newline='') as csv_File:
+
+                    #[today, name, price, stock_Number, color, mileage, transmission]
+                    reader_obj = csv.writer(csv_File)
+                    reader_obj.writerow([today, motorcycle_name, motorcycle_price, "", information_Dict['color'], information_Dict['odometer'],
+                                         information_Dict['transmission'], information_Dict['engine displacement'],information_Dict['condition']])
+    except (AttributeError, TypeError):
+        pass
+
+links_To_Scrape = ["https://www.newenglandpowersports.com/preowned","https://www.cycledesignonline.com/default.asp?page=xPreOwnedInventory",
+                   "https://boston.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50"]
 today = str(date.today())
 
 
@@ -114,4 +164,7 @@ if __name__ == '__main__':
                     print("Link: " + link + " is not a link to a motorcycle.")
                     print(error)
                     pass
+            elif "craigslist" in link:
+                get_Motorcycle_Information_Craigslist(link)
+
 
