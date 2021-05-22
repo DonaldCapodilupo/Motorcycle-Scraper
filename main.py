@@ -118,7 +118,10 @@ def get_Motorcycle_Information_Craigslist(url):
         pass
 
 links_To_Scrape = ["https://www.newenglandpowersports.com/preowned","https://www.cycledesignonline.com/default.asp?page=xPreOwnedInventory",
-                   "https://boston.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50"]
+                   "https://boston.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+                   "https://worcester.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+                   "https://westernmass.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+                   "https://capecod.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50"]
 today = str(date.today())
 
 
@@ -147,8 +150,8 @@ if __name__ == '__main__':
                         reader_obj.writerow(motorcycle_information)
 
                 except (AttributeError, requests.exceptions.InvalidSchema) as error:
-                    print("Link: " + link + " is not a link to a motorcycle.")
-                    print(error)
+                    #print("Link: " + link + " is not a link to a motorcycle.")
+                    #print(error)
                     pass
 
             elif "https://www.newenglandpowersports.com/" in link:
@@ -161,10 +164,16 @@ if __name__ == '__main__':
                         reader_obj.writerow(motorcycle_information)
 
                 except (AttributeError, requests.exceptions.InvalidSchema) as error:
-                    print("Link: " + link + " is not a link to a motorcycle.")
-                    print(error)
+                    #print("Link: " + link + " is not a link to a motorcycle.")
+                    #print(error)
                     pass
             elif "craigslist" in link:
-                get_Motorcycle_Information_Craigslist(link)
+                try:
+                    get_Motorcycle_Information_Craigslist(link)
+                except UnicodeEncodeError:
+                    if link.title == 'next page':
+                        links_To_Scrape.append(link)
+                    pass
 
 
+        driver.close()
