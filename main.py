@@ -145,42 +145,55 @@ def craigslistCrawler():
                 pass
 
 def newEnglandPowersportsCrawler():
+    from selenium.webdriver.chrome.options import Options
+    from selenium.common.exceptions import StaleElementReferenceException
+
+
     for website in links_To_Scrape['Central Mass Powersport']:
-
-        soup = BeautifulSoup(reqs.text, 'html.parser')
-
-        href_tags = soup.find_all(href=True)
-        hrefs = [tag.get('href') for tag in href_tags]
-
-
-        for link in hrefs:
-            print(link)
-
-        print(website)
-
-        driver = webdriver.Chrome()
-        driver.get(website)
-
-        motorcycle_Links = []
+        #Code to make selenium headless.
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        driver = webdriver.Chrome(options=chrome_options)
 
         elems = driver.find_elements_by_tag_name('a')
-        for link in elems:
-            href = link.get_attribute('href')
-            if href is not None:
-                if href not in motorcycle_Links:
-                    motorcycle_Links.append(href)
-        for link in motorcycle_Links:
-            try:
-                motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(link)
-                with open('output.csv', 'a', newline='') as csv_File:
+        for elem in elems:
+            href = elem.get_attribute('href')
+            if href is not None and "uDetail" in href:
+                motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
+                with open('Big Titti3es.csv', 'a', newline='') as csv_File:
                     reader_obj = csv.writer(csv_File)
                     reader_obj.writerow(motorcycle_information)
 
-            except (AttributeError, requests.exceptions.InvalidSchema) as error:
-                pass
-        driver.close()
+        pages = int(driver.find_elements_by_xpath('/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span')[0].text[-1])
+
+        next_Page_Button = driver.find_elements_by_xpath(
+            '/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span/span')[0]
 
 
+
+
+
+        for i in range(pages):
+            try:
+                next_Page_Button.click()
+                elems = driver.find_elements_by_tag_name('a')
+                for elem in elems:
+                    href = elem.get_attribute('href')
+                    if href is not None and "uDetail" in href:
+                        motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
+                        with open('Big Titti3es.csv', 'a', newline='') as csv_File:
+                            reader_obj = csv.writer(csv_File)
+                            reader_obj.writerow(motorcycle_information)
+            except StaleElementReferenceException:
+                print('StaleElementReferenceException while trying to type password, trying to find element again')
+                elems = driver.find_elements_by_tag_name('a')
+                for elem in elems:
+                    href = elem.get_attribute('href')
+                    if href is not None and "uDetail" in href:
+                        motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
+                        with open('Big Titti3es.csv', 'a', newline='') as csv_File:
+                            reader_obj = csv.writer(csv_File)
+                            reader_obj.writerow(motorcycle_information)
 
 
 links_To_Scrape = {'Craigslist':
@@ -199,34 +212,10 @@ today = str(date.today())
 if __name__ == '__main__':
     setupFiles()
 
-    craigslistCrawler()
+    #craigslistCrawler()
 
-    #newEnglandPowersportsCrawler()
+    #cycleDesignCrawler()
 
-
-
-    #for website in links_To_Scrape['Cycle Design']:
-#
-    #    driver = webdriver.Chrome()
-    #    driver.get(website)
-#
-    #    motorcycle_Links = []
-#
-    #    elems = driver.find_elements_by_tag_name('a')
-    #    for link in elems:
-    #        href = link.get_attribute('href')
-    #        if href is not None:
-    #            if href not in motorcycle_Links:
-    #                motorcycle_Links.append(href)
-    #    for link in motorcycle_Links:
-    #        try:
-    #            motorcycle_information = get_Motorcycle_Information_Cycle_Design(link)
-    #            with open('output.csv', 'a', newline='') as csv_File:
-    #                reader_obj = csv.writer(csv_File)
-    #                reader_obj.writerow(motorcycle_information)
-#
-    #        except (AttributeError, requests.exceptions.InvalidSchema) as error:
-    #            pass
-    #    driver.close()
+    newEnglandPowersportsCrawler()
 
 
