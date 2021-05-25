@@ -16,6 +16,10 @@ def setupFiles():
             writer.writerow(["date", "name", "price", "stock_Number", "color", "mileage", "transmission","engine displacement",
                              "condition"])
 
+def write_Motorcycle_Information_To_CSV(motorcycle_information):
+    with open('output.csv', 'a', newline='') as csv_File:
+        reader_obj = csv.writer(csv_File)
+        reader_obj.writerow(motorcycle_information)
 
 def get_Motorcycle_Information_Cycle_Design(url):
     page_Info = requests.get(url).text
@@ -49,24 +53,6 @@ def get_Motorcycle_Information_Cycle_Design(url):
     return information
 
 
-def get_Motorcycle_Information_Central_Mass_Powersport(url):
-    page_Info = requests.get(url).text
-
-
-    soup = BeautifulSoup(page_Info, 'html.parser')
-
-    name = soup.find('div', class_='caption-container').text.strip()
-
-    information_Table = soup.find_all('dl', 'dl-horizontal')
-    right_Column = information_Table[1]
-    left_column = information_Table[0]
-
-    color = left_column.contents[23].text.strip()
-    price = right_Column.contents[3].text.strip()
-    mileage =  right_Column.contents[15].text.strip()
-
-    information = [today, name,  price, "", color, mileage]
-    return information
 
 def get_Motorcycle_Information_Craigslist(url):
     try:
@@ -144,6 +130,39 @@ def craigslistCrawler():
                     links_To_Scrape['Craigslist'].append(link)
                 pass
 
+
+
+
+
+def get_Motorcycle_Information_Central_Mass_Powersport(url):
+    page_Info = requests.get(url).text
+
+
+    soup = BeautifulSoup(page_Info, 'html.parser')
+
+    name = soup.find('div', class_='caption-container').text.strip()
+
+    information_Table = soup.find_all('dl', 'dl-horizontal')
+    right_Column = information_Table[1]
+    left_column = information_Table[0]
+
+    color = left_column.contents[23].text.strip()
+    price = right_Column.contents[3].text.strip()
+    mileage =  right_Column.contents[15].text.strip()
+
+    information = [today, name,  price, "", color, mileage]
+    return information
+
+def scrape_New_England_PowerSports_Main_INV_Page(website, driver):
+    a_Elements = driver.find_elements_by_tag_name('a')
+    for elements in a_Elements:
+        href = elements.get_attribute('href')
+        if href is not None and "uDetail" in href:
+            print("Proper elements found - scraping: " + website + " - New England PowerSports")
+            motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
+            write_Motorcycle_Information_To_CSV(motorcycle_information)
+
+
 def newEnglandPowersportsCrawler():
     from selenium.webdriver.chrome.options import Options
     from selenium.common.exceptions import StaleElementReferenceException
@@ -155,45 +174,36 @@ def newEnglandPowersportsCrawler():
         chrome_options.add_argument("--headless")
         driver = webdriver.Chrome(options=chrome_options)
 
-        elems = driver.find_elements_by_tag_name('a')
-        for elem in elems:
-            href = elem.get_attribute('href')
-            if href is not None and "uDetail" in href:
-                motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
-                with open('Big Titti3es.csv', 'a', newline='') as csv_File:
-                    reader_obj = csv.writer(csv_File)
-                    reader_obj.writerow(motorcycle_information)
+        driver.get(website)
 
-        pages = int(driver.find_elements_by_xpath('/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span')[0].text[-1])
+        pages = int(
+            driver.find_elements_by_xpath('/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span')[0].text[-1])
 
         next_Page_Button = driver.find_elements_by_xpath(
             '/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span/span')[0]
 
+        for page_num in range(pages):
+            try:
+                scrape_New_England_PowerSports_Main_INV_Page(website, driver)
+                print('Moving on to page ' + str(page_num) + ". - New England PowerSport")
+            except StaleElementReferenceException:
+                print('StaleElementReferenceException, attempting to find a tags again.')
+                scrape_New_England_PowerSports_Main_INV_Page(website, driver)
+                print('Moving on to page ' + str(page_num) + ". - New England PowerSport")
 
-
-
-
-        for i in range(pages):
             try:
                 next_Page_Button.click()
-                elems = driver.find_elements_by_tag_name('a')
-                for elem in elems:
-                    href = elem.get_attribute('href')
-                    if href is not None and "uDetail" in href:
-                        motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
-                        with open('Big Titti3es.csv', 'a', newline='') as csv_File:
-                            reader_obj = csv.writer(csv_File)
-                            reader_obj.writerow(motorcycle_information)
             except StaleElementReferenceException:
-                print('StaleElementReferenceException while trying to type password, trying to find element again')
-                elems = driver.find_elements_by_tag_name('a')
-                for elem in elems:
-                    href = elem.get_attribute('href')
-                    if href is not None and "uDetail" in href:
-                        motorcycle_information = get_Motorcycle_Information_Central_Mass_Powersport(href)
-                        with open('Big Titti3es.csv', 'a', newline='') as csv_File:
-                            reader_obj = csv.writer(csv_File)
-                            reader_obj.writerow(motorcycle_information)
+                break
+
+
+
+
+
+
+
+
+
 
 
 links_To_Scrape = {'Craigslist':
@@ -212,7 +222,7 @@ today = str(date.today())
 if __name__ == '__main__':
     setupFiles()
 
-    #craigslistCrawler()
+    craigslistCrawler()
 
     #cycleDesignCrawler()
 
