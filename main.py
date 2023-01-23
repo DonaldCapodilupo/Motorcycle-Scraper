@@ -1,23 +1,53 @@
-from bs4 import BeautifulSoup
 import requests
 import csv
 from selenium import webdriver
 from datetime import date
+import os
+from bs4 import BeautifulSoup
+
+class WebCrawler:
+    def __init__(self, website):
+
+
+        self.html_to_scrape = BeautifulSoup(requests.get(website), 'html.parser')
+
+        if "Craigslist" in website:
+            self.craigslist_data = self.scrape_Craigslist
+
+
+
+    def scrape_Craigslist(self):
+
+        href_tags = self.html_to_scrape.find_all(href=True)
+
+        hrefs = [tag.get('href') for tag in href_tags]
+
+        hrefs_No_Duplicates = []
+
+        for link in hrefs:
+            if link not in hrefs_No_Duplicates:
+                hrefs_No_Duplicates.append(link)
+
+        for link in hrefs_No_Duplicates:
+            try:
+                get_Motorcycle_Information_Craigslist(link)
+                print("Scraped: " + link)
+            except UnicodeEncodeError:
+                if link.title == 'next page':
+                    links_To_Scrape['Craigslist'].append(link)
+                pass
 
 
 def setupFiles():
-    import csv
-    try:
-        with open('output.csv', newline='') as csvFile:
-            pass
-    except FileNotFoundError:
-        with open('output.csv', 'w', newline='') as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerow(["date", "name", "price", "stock_Number", "color", "mileage", "transmission","engine displacement",
-                             "condition"])
+    print(os.listdir())
+
+    if "Historical Data" not in os.listdir():
+        os.mkdir("Historical Data")
+
+
 
 def write_Motorcycle_Information_To_CSV(motorcycle_information):
-    with open('output.csv', 'a', newline='') as csv_File:
+    with open('cat.csv', 'a', newline='') as csv_File:
         reader_obj = csv.writer(csv_File)
         reader_obj.writerow(motorcycle_information)
 
@@ -52,6 +82,27 @@ def get_Motorcycle_Information_Cycle_Design(url):
     information = [today, name, price, stock_Number, color, mileage, transmission]
     return information
 
+
+def cycleDesignCrawler():
+    from selenium.webdriver.chrome.options import Options
+    for website in links_To_Scrape['Cycle Design']:
+        # Code to make selenium headless.
+        chrome_options = Options()
+        chrome_options.add_argument("--headless")
+        driver = webdriver.Chrome(options=chrome_options)
+
+        driver.get(website)
+
+
+        for elements in driver.find_elements_by_tag_name('a'):
+            href = elements.get_attribute('href')
+            print(href)
+            if href is not None and "www." in href:
+                print("Proper elements found - scraping: " + website + " - New England PowerSports")
+                try:
+                    write_Motorcycle_Information_To_CSV(get_Motorcycle_Information_Cycle_Design(href))
+                except AttributeError:
+                    print('Just kidding - that one didn\'t work lol')
 
 
 def get_Motorcycle_Information_Craigslist(url):
@@ -140,7 +191,11 @@ def get_Motorcycle_Information_Central_Mass_Powersport(url):
 
     soup = BeautifulSoup(page_Info, 'html.parser')
 
-    name = soup.find('div', class_='caption-container').text.strip()
+    try:
+        name = soup.find('div', class_='caption-container').text.strip()
+    except AttributeError:
+        print("Attribute Error - Skipping")
+        return []
 
     information_Table = soup.find_all('dl', 'dl-horizontal')
     right_Column = information_Table[1]
@@ -223,9 +278,9 @@ if __name__ == '__main__':
     setupFiles()
 
     craigslistCrawler()
-
+#
     #cycleDesignCrawler()
-
-    newEnglandPowersportsCrawler()
+#
+    #newEnglandPowersportsCrawler()
 
 
