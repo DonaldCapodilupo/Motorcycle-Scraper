@@ -5,37 +5,25 @@ from datetime import date
 import os
 from bs4 import BeautifulSoup
 
-class WebCrawler:
-    def __init__(self, website):
+output_file = "Motorcycle Data.csv"
 
-
-        self.html_to_scrape = BeautifulSoup(requests.get(website), 'html.parser')
-
-        if "Craigslist" in website:
-            self.craigslist_data = self.scrape_Craigslist
-
-
-
-    def scrape_Craigslist(self):
-
-        href_tags = self.html_to_scrape.find_all(href=True)
-
-        hrefs = [tag.get('href') for tag in href_tags]
-
-        hrefs_No_Duplicates = []
-
-        for link in hrefs:
-            if link not in hrefs_No_Duplicates:
-                hrefs_No_Duplicates.append(link)
-
-        for link in hrefs_No_Duplicates:
-            try:
-                get_Motorcycle_Information_Craigslist(link)
-                print("Scraped: " + link)
-            except UnicodeEncodeError:
-                if link.title == 'next page':
-                    links_To_Scrape['Craigslist'].append(link)
-                pass
+links_To_Scrape = {'Craigslist':
+    [
+        "https://boston.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+        "https://worcester.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+        "https://westernmass.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+        "https://capecod.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
+        'https://southcoast.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50'
+    ],
+    'Cycle Design': [
+        "https://www.cycledesignonline.com/default.asp?page=xPreOwnedInventory"
+    ],
+    'Central Mass Powersport':
+        [
+            "https://www.newenglandpowersports.com/preowned"
+        ]
+}
+today = str(date.today())
 
 
 def setupFiles():
@@ -45,15 +33,14 @@ def setupFiles():
         os.mkdir("Historical Data")
 
 
-
 def write_Motorcycle_Information_To_CSV(motorcycle_information):
-    with open('cat.csv', 'a', newline='') as csv_File:
+    with open(output_file, 'a', newline='') as csv_File:
         reader_obj = csv.writer(csv_File)
         reader_obj.writerow(motorcycle_information)
 
+
 def get_Motorcycle_Information_Cycle_Design(url):
     page_Info = requests.get(url).text
-
 
     soup = BeautifulSoup(page_Info, 'html.parser')
 
@@ -78,7 +65,6 @@ def get_Motorcycle_Information_Cycle_Design(url):
     proper_Row_Transmission = more_Specific_Information_Table.find('li', 'liUnit LiInvTransmission')
     transmission = proper_Row_Transmission.find('span').text
 
-
     information = [today, name, price, stock_Number, color, mileage, transmission]
     return information
 
@@ -92,7 +78,6 @@ def cycleDesignCrawler():
         driver = webdriver.Chrome(options=chrome_options)
 
         driver.get(website)
-
 
         for elements in driver.find_elements_by_tag_name('a'):
             href = elements.get_attribute('href')
@@ -113,7 +98,7 @@ def get_Motorcycle_Information_Craigslist(url):
         soup = BeautifulSoup(page_Info, 'html.parser')
         try:
             title_Row = soup.find('span', class_='postingtitletext')
-            motorcycle_name = title_Row.find('span',  id="titletextonly").text
+            motorcycle_name = title_Row.find('span', id="titletextonly").text
             motorcycle_price = title_Row.find('span', class_="price").text
 
             information_Table = soup.find('div', class_='mapAndAttrs')
@@ -141,16 +126,18 @@ def get_Motorcycle_Information_Craigslist(url):
                         information_Dict['engine displacement'] = s.text[19:]
 
                 if information_Dict['condition'] != '':
-                    with open('output.csv', 'a', newline='') as csv_File:
-
-                        #[today, name, price, stock_Number, color, mileage, transmission]
+                    with open(output_file, 'a', newline='') as csv_File:
+                        # [today, name, price, stock_Number, color, mileage, transmission]
                         reader_obj = csv.writer(csv_File)
-                        reader_obj.writerow([today, motorcycle_name, motorcycle_price, "", information_Dict['color'], information_Dict['odometer'],
-                                             information_Dict['transmission'], information_Dict['engine displacement'],information_Dict['condition']])
+                        reader_obj.writerow([today, motorcycle_name, motorcycle_price, "", information_Dict['color'],
+                                             information_Dict['odometer'],
+                                             information_Dict['transmission'], information_Dict['engine displacement'],
+                                             information_Dict['condition']])
         except (AttributeError, TypeError):
             pass
     except requests.exceptions.MissingSchema:
         pass
+
 
 def craigslistCrawler():
     for website in links_To_Scrape['Craigslist']:
@@ -169,9 +156,6 @@ def craigslistCrawler():
             if link not in hrefs_No_Duplicates:
                 hrefs_No_Duplicates.append(link)
 
-
-
-
         for link in hrefs_No_Duplicates:
             try:
                 get_Motorcycle_Information_Craigslist(link)
@@ -182,12 +166,8 @@ def craigslistCrawler():
                 pass
 
 
-
-
-
 def get_Motorcycle_Information_Central_Mass_Powersport(url):
     page_Info = requests.get(url).text
-
 
     soup = BeautifulSoup(page_Info, 'html.parser')
 
@@ -203,10 +183,11 @@ def get_Motorcycle_Information_Central_Mass_Powersport(url):
 
     color = left_column.contents[23].text.strip()
     price = right_Column.contents[3].text.strip()
-    mileage =  right_Column.contents[15].text.strip()
+    mileage = right_Column.contents[15].text.strip()
 
-    information = [today, name,  price, "", color, mileage]
+    information = [today, name, price, "", color, mileage]
     return information
+
 
 def scrape_New_England_PowerSports_Main_INV_Page(website, driver):
     a_Elements = driver.find_elements_by_tag_name('a')
@@ -222,9 +203,8 @@ def newEnglandPowersportsCrawler():
     from selenium.webdriver.chrome.options import Options
     from selenium.common.exceptions import StaleElementReferenceException
 
-
     for website in links_To_Scrape['Central Mass Powersport']:
-        #Code to make selenium headless.
+        # Code to make selenium headless.
         chrome_options = Options()
         chrome_options.add_argument("--headless")
         driver = webdriver.Chrome(options=chrome_options)
@@ -252,35 +232,11 @@ def newEnglandPowersportsCrawler():
                 break
 
 
-
-
-
-
-
-
-
-
-
-links_To_Scrape = {'Craigslist':
-                       ["https://boston.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
-                        "https://worcester.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
-                        "https://westernmass.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
-                        "https://capecod.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50",
-                        'https://southcoast.craigslist.org/search/mca?purveyor-input=all&condition=20&condition=30&condition=40&condition=50'
-                        ],
-                   'Cycle Design':["https://www.cycledesignonline.com/default.asp?page=xPreOwnedInventory"],
-                   'Central Mass Powersport':["https://www.newenglandpowersports.com/preowned"]
-}
-today = str(date.today())
-
-
 if __name__ == '__main__':
     setupFiles()
 
-    craigslistCrawler()
+    #craigslistCrawler()
 #
     #cycleDesignCrawler()
 #
-    #newEnglandPowersportsCrawler()
-
-
+    newEnglandPowersportsCrawler()
