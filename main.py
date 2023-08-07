@@ -2,10 +2,10 @@ import requests
 import csv
 from selenium import webdriver
 from datetime import date
-import os
+import os, time
 from bs4 import BeautifulSoup
 
-output_file = "Motorcycle Data.csv"
+output_file = "Historical Data/Motorcycle Data.csv"
 
 links_To_Scrape = {'Craigslist':
     [
@@ -31,6 +31,12 @@ def setupFiles():
 
     if "Historical Data" not in os.listdir():
         os.mkdir("Historical Data")
+    if "Motorcycle Data.csv" not in os.listdir("Historical Data"):
+        with open('Historical Data/Motorcycle Data.csv', 'w', newline='') as file:
+            writer = csv.writer(file)
+            headers = ["Date", "Name", "Price","Stock #","Color", "Mileage", "Transmission"]
+
+            writer.writerow(headers)
 
 
 def write_Motorcycle_Information_To_CSV(motorcycle_information):
@@ -44,26 +50,66 @@ def get_Motorcycle_Information_Cycle_Design(url):
 
     soup = BeautifulSoup(page_Info, 'html.parser')
 
-    title_Section = soup.find('div', 'unitTitle')
-    name = title_Section.find('h1').text
+    try:
 
-    price_Section = soup.find('div', 'unitPrice')
-    price = price_Section.find('h2').text
+        title_Section = soup.find('div', 'unitTitle')
+        name = title_Section.find('h1').text
+        print("Name: " + name)
+
+    except AttributeError:
+        print("The URL: " + url + " did not have an attribute for TITLE")
+        name = "NAN"
+
+    try:
+        price_Section = soup.find('div', 'unitPrice')
+        price = price_Section.find('h2').text
+        print("Price: " + price)
+    except AttributeError:
+        print("The URL: " + url + " did not have an attribute for PRICE")
+        price = "NAN"
 
     information_Table = soup.find('div', 'unitHighlights')
     more_Specific_Information_Table = information_Table.find('ul')
 
-    proper_Row_Stock_Number = more_Specific_Information_Table.find('li', 'liUnit LiInvStockNumber')
-    stock_Number = proper_Row_Stock_Number.find('span').text
+    try:
+        proper_Row_Stock_Number = more_Specific_Information_Table.find('li', 'liUnit LiInvStockNumber')
+        stock_Number = proper_Row_Stock_Number.find('span').text
+        print("Stock #: " + stock_Number)
+    except AttributeError:
+        print("The URL: " + url + " did not have an attribute for STOCK NUMBER")
+        stock_Number = "NAN"
 
-    proper_Row_Color = more_Specific_Information_Table.find('li', 'liUnit LiInvColor')
-    color = proper_Row_Color.find('span').text
 
-    proper_Row_Mileage = more_Specific_Information_Table.find('li', 'liUnit LiInvMileage')
-    mileage = proper_Row_Mileage.find('span').text
 
-    proper_Row_Transmission = more_Specific_Information_Table.find('li', 'liUnit LiInvTransmission')
-    transmission = proper_Row_Transmission.find('span').text
+    try:
+        proper_Row_Color = more_Specific_Information_Table.find('li', 'liUnit LiInvColor')
+        color = proper_Row_Color.find('span').text
+        print("Color: " + color)
+    except AttributeError:
+        print("The URL: " + url + " did not have an attribute for COLOR")
+        color = "NAN"
+
+
+
+    try:
+        proper_Row_Mileage = more_Specific_Information_Table.find('li', 'liUnit LiInvMileage')
+        mileage = proper_Row_Mileage.find('span').text
+        print("Mileage: " + mileage)
+    except AttributeError:
+        print("The URL: " + url + " did not have an attribute for MILEAGE")
+        mileage = "NAN"
+
+
+
+    try:
+        proper_Row_Transmission = more_Specific_Information_Table.find('li', 'liUnit LiInvTransmission')
+        transmission = proper_Row_Transmission.find('span').text
+        print("Transmission: " + transmission)
+    except AttributeError:
+        print("The URL: " + url + " did not have an attribute for TRANSMISSION")
+        transmission = "NAN"
+
+
 
     information = [today, name, price, stock_Number, color, mileage, transmission]
     return information
@@ -79,15 +125,33 @@ def cycleDesignCrawler():
 
         driver.get(website)
 
-        for elements in driver.find_elements_by_tag_name('a'):
-            href = elements.get_attribute('href')
-            print(href)
-            if href is not None and "www." in href:
-                print("Proper elements found - scraping: " + website + " - New England PowerSports")
-                try:
-                    write_Motorcycle_Information_To_CSV(get_Motorcycle_Information_Cycle_Design(href))
-                except AttributeError:
-                    print('Just kidding - that one didn\'t work lol')
+        html = driver.page_source
+
+        soup = BeautifulSoup(html)
+        for advertised_vehicle in soup.find_all('div', attrs={'class': 'unitTitle'}):
+
+            vehicle_name = advertised_vehicle.text
+            print("Vehicle name: " + vehicle_name)
+
+            print(advertised_vehicle.a["href"])
+            link_to_vehicle_page = "https://www.cycledesignonline.com" + advertised_vehicle.a["href"]
+
+            try:
+                write_Motorcycle_Information_To_CSV(get_Motorcycle_Information_Cycle_Design(link_to_vehicle_page))
+            except AttributeError:
+                print('Just kidding ')
+                print(link_to_vehicle_page)
+                # print("Caused an ATTRIBUTE ERROR: " + str(help(AttributeError)))
+
+        # for elements in driver.find_elements_by_class_name('unitTitle'):
+        #    href = elements.get_attribute('href')
+        #    print(href)
+        #    if href is not None and "www." in href:
+        #        print("Proper elements found - scraping: " + website + " - New England PowerSports")
+        #        try:
+        #            write_Motorcycle_Information_To_CSV(get_Motorcycle_Information_Cycle_Design(href))
+        #        except AttributeError:
+        #            print('Just kidding - that one didn\'t work lol')
 
 
 def get_Motorcycle_Information_Craigslist(url):
@@ -211,32 +275,41 @@ def newEnglandPowersportsCrawler():
 
         driver.get(website)
 
-        pages = int(
-            driver.find_elements_by_xpath('/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span')[0].text[-1])
+        page_Info = requests.get(url).text
 
-        next_Page_Button = driver.find_elements_by_xpath(
-            '/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span/span')[0]
+        soup = BeautifulSoup(page_Info, 'html.parser')
 
-        for page_num in range(pages):
-            try:
-                scrape_New_England_PowerSports_Main_INV_Page(website, driver)
-                print('Moving on to page ' + str(page_num) + ". - New England PowerSport")
-            except StaleElementReferenceException:
-                print('StaleElementReferenceException, attempting to find a tags again.')
-                scrape_New_England_PowerSports_Main_INV_Page(website, driver)
-                print('Moving on to page ' + str(page_num) + ". - New England PowerSport")
+        project_href = [i['href'] for i in soup.find_all('a', href=True)]
 
-            try:
-                next_Page_Button.click()
-            except StaleElementReferenceException:
-                break
+        print(driver.find_elements_by_id("href"))
+
+        # pages = int(
+        #    driver.find_elements_by_xpath('/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span')[0].text[-1])
+
+
+#
+# next_Page_Button = driver.find_elements_by_id(
+#    '/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span/span')[0]
+#
+# for page_num in range(pages):
+#    try:
+#        scrape_New_England_PowerSports_Main_INV_Page(website, driver)
+#        print('Moving on to page ' + str(page_num) + ". - New England PowerSport")
+#    except StaleElementReferenceException:
+#        print('StaleElementReferenceException, attempting to find a tags again.')
+#        scrape_New_England_PowerSports_Main_INV_Page(website, driver)
+#        print('Moving on to page ' + str(page_num) + ". - New England PowerSport")
+#
+#    try:
+#        next_Page_Button.click()
+#    except StaleElementReferenceException:
+#        break
 
 
 if __name__ == '__main__':
     setupFiles()
 
-    #craigslistCrawler()
-#
-    #cycleDesignCrawler()
-#
-    newEnglandPowersportsCrawler()
+    craigslistCrawler()
+
+    cycleDesignCrawler()
+
