@@ -20,7 +20,20 @@ links_To_Scrape = {'Craigslist':
     ],
     'Central Mass Powersport':
         [
-            "https://www.newenglandpowersports.com/preowned"
+            "https://www.newenglandpowersports.com/preowned",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=2",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=3",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=4",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=5",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=6",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=7",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=8",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=9",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=10",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=11",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=12",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=13",
+            "https://www.newenglandpowersports.com/inventory/used/?inv_page=14",
         ]
 }
 today = str(date.today())
@@ -34,7 +47,7 @@ def setupFiles():
     if "Motorcycle Data.csv" not in os.listdir("Historical Data"):
         with open('Historical Data/Motorcycle Data.csv', 'w', newline='') as file:
             writer = csv.writer(file)
-            headers = ["Date", "Name", "Price","Stock #","Color", "Mileage", "Transmission"]
+            headers = ["Date", "Name", "Price", "Stock #", "Color", "Mileage", "Transmission"]
 
             writer.writerow(headers)
 
@@ -79,8 +92,6 @@ def get_Motorcycle_Information_Cycle_Design(url):
         print("The URL: " + url + " did not have an attribute for STOCK NUMBER")
         stock_Number = "NAN"
 
-
-
     try:
         proper_Row_Color = more_Specific_Information_Table.find('li', 'liUnit LiInvColor')
         color = proper_Row_Color.find('span').text
@@ -88,8 +99,6 @@ def get_Motorcycle_Information_Cycle_Design(url):
     except AttributeError:
         print("The URL: " + url + " did not have an attribute for COLOR")
         color = "NAN"
-
-
 
     try:
         proper_Row_Mileage = more_Specific_Information_Table.find('li', 'liUnit LiInvMileage')
@@ -99,8 +108,6 @@ def get_Motorcycle_Information_Cycle_Design(url):
         print("The URL: " + url + " did not have an attribute for MILEAGE")
         mileage = "NAN"
 
-
-
     try:
         proper_Row_Transmission = more_Specific_Information_Table.find('li', 'liUnit LiInvTransmission')
         transmission = proper_Row_Transmission.find('span').text
@@ -108,8 +115,6 @@ def get_Motorcycle_Information_Cycle_Design(url):
     except AttributeError:
         print("The URL: " + url + " did not have an attribute for TRANSMISSION")
         transmission = "NAN"
-
-
 
     information = [today, name, price, stock_Number, color, mileage, transmission]
     return information
@@ -230,26 +235,28 @@ def craigslistCrawler():
                 pass
 
 
-def get_Motorcycle_Information_Central_Mass_Powersport(url):
+def get_Motorcycle_Information_Central_Mass_Powersport(url, motorcycle_name):
     page_Info = requests.get(url).text
 
     soup = BeautifulSoup(page_Info, 'html.parser')
 
-    try:
-        name = soup.find('div', class_='caption-container').text.strip()
-    except AttributeError:
-        print("Attribute Error - Skipping")
-        return []
+    information = [today, motorcycle_name, ]
 
-    information_Table = soup.find_all('dl', 'dl-horizontal')
-    right_Column = information_Table[1]
-    left_column = information_Table[0]
+    print(soup.find("span", class_="pull-right").text.replace("&dollar", "").strip())
 
-    color = left_column.contents[23].text.strip()
-    price = right_Column.contents[3].text.strip()
-    mileage = right_Column.contents[15].text.strip()
+    motorcycle_information = ["vdp-item-color-exterior-name", "vdp-stockNum", "vdp-item-mileage"]
 
-    information = [today, name, price, "", color, mileage]
+    for motorcycle_information_class in motorcycle_information:
+
+        try:
+            item = soup.find('li', class_=motorcycle_information_class).span.text
+            print(item)
+            information.append(item)
+        except AttributeError:
+            print("Attribute Error - Does this link not have " + motorcycle_information_class + " ?")
+            information.append("")
+
+    # information = [today, name, price, stock_num, color, mileage]
     return information
 
 
@@ -275,17 +282,22 @@ def newEnglandPowersportsCrawler():
 
         driver.get(website)
 
-        page_Info = requests.get(url).text
+        html = driver.page_source
 
-        soup = BeautifulSoup(page_Info, 'html.parser')
+        soup = BeautifulSoup(html)
 
-        project_href = [i['href'] for i in soup.find_all('a', href=True)]
+        for advertised_vehicle in soup.find_all('div', attrs={'class': 'vlpm3VehicleName'}):
+            vehicle_name = advertised_vehicle.text.strip()
+            print("Vehicle name: " + vehicle_name)
 
-        print(driver.find_elements_by_id("href"))
+            print(advertised_vehicle.a["href"])
+            link_to_vehicle_page = "https://www.newenglandpowersports.com" + advertised_vehicle.a["href"]
 
-        # pages = int(
-        #    driver.find_elements_by_xpath('/html/body/div[2]/div/div[2]/div/div[1]/div/div[3]/span')[0].text[-1])
-
+            try:
+                write_Motorcycle_Information_To_CSV(
+                    get_Motorcycle_Information_Central_Mass_Powersport(link_to_vehicle_page, vehicle_name))
+            except AttributeError:
+                print("Attribute Error - " + link_to_vehicle_page + " is a bogus link. Check it out")
 
 #
 # next_Page_Button = driver.find_elements_by_id(
@@ -313,3 +325,4 @@ if __name__ == '__main__':
 
     cycleDesignCrawler()
 
+    newEnglandPowersportsCrawler()
